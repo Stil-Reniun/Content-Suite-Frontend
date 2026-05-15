@@ -84,10 +84,6 @@ npm -v    # Debe mostrar 10.x.x o superior
 - [11. Observabilidad con Langfuse](#11-observabilidad-con-langfuse)
 - [12. Flujos de Gobernanza](#12-flujos-de-gobernanza)
 - [13. Arquitectura RAG](#13-arquitectura-rag)
-- [14. Auditoría Multimodal](#14-auditoría-multimodal)
-- [15. Valor al Negocio](#15-valor-al-negocio)
-- [16. Limitaciones y Futuras Mejoras](#16-limitaciones-y-futuras-mejoras)
-- [17. Licencia](#17-licencia)
 
 ---
 
@@ -109,9 +105,9 @@ Un ecosistema de 4 módulos interconectados:
 
 | Módulo | Función | Tecnología IA |
 |--------|---------|---------------|
-| **Brand DNA Architect** | Genera manuales de marca estructurados | LLM (Groq/Llama 3) |
-| **Creative Engine** | Genera contenido coherente con la marca | RAG + LLM |
-| **Governance & Audit** | Flujo de aprobación + auditoría visual | Modelo multimodal (Google AI) |
+| **Brand DNA Architect** | Genera manuales de marca estructurados | OpenAI (GPT) |
+| **Creative Engine** | Genera contenido coherente con la marca | RAG + OpenAI |
+| **Governance & Audit** | Flujo de aprobación + auditoría visual | OpenAI gpt-4o (Vision) |
 | **Observability** | Trazabilidad completa de cada interacción | Langfuse |
 
 ---
@@ -139,7 +135,7 @@ Un ecosistema de 4 módulos interconectados:
                                │ HTTPS/REST
                                ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                     BACKEND (FastAPI + Render)                  │
+│               BACKEND (FastAPI + Google Cloud Run)              │
 │  ┌──────────────┐ ┌──────────────┐ ┌──────────────────────────┐ │
 │  │  Auth Module │ │ Brand DNA    │ │  Governance Engine       │ │
 │  │  (JWT/RBAC)  │ │ Generator    │ │  (Approval Workflow)     │ │
@@ -148,15 +144,15 @@ Un ecosistema de 4 módulos interconectados:
 │              ┌───────────────┼───────────────┐                  │
 │              ▼               ▼               ▼                  │
 │     ┌──────────────┐ ┌──────────────┐ ┌──────────────┐         │
-│     │  Groq Cloud  │ │ Google AI    │ │  Langfuse    │         │
-│     │  (Llama 3)   │ │ Studio       │ │  (Tracing)   │         │
-│     │  Text LLM    │ │ (Multimodal) │ │              │         │
+│     │   OpenAI     │ │   OpenAI     │ │  Langfuse    │         │
+│     │  gpt-4o-mini │ │  gpt-4o      │ │  (Tracing)   │         │
+│     │  (Texto LLM) │ │  (Vision)    │ │              │         │
 │     └──────────────┘ └──────────────┘ └──────────────┘         │
 │                              │                                  │
 │                    ┌─────────┴─────────┐                        │
 │                    │   Supabase        │                        │
 │                    │  (PostgreSQL +    │                        │
-│                    │   pgvector)       │                        │
+│                    │   pgvector + Auth)│                        │
 │                    └───────────────────┘                        │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -252,7 +248,7 @@ Un ecosistema de 4 módulos interconectados:
 
 #### Aprobador B — Auditoría Multimodal
 - Sube una imagen para validar contra el manual de marca
-- El sistema usa un **modelo de visión** (Google AI Studio) para analizar:
+- El sistema usa **OpenAI gpt-4o (Vision API)** para analizar:
   - Colores utilizados vs paleta permitida
   - Tamaño y posición del logo
   - Cumplimiento de reglas visuales
@@ -299,15 +295,15 @@ Un ecosistema de 4 módulos interconectados:
 | Tecnología | Propósito |
 |------------|-----------|
 | **FastAPI** | Framework backend de alta velocidad |
-| **Render** | Hosting gratuito del backend |
+| **Google Cloud Run** | Hosting serverless del backend |
 | **Supabase** | PostgreSQL + pgvector + autenticación |
 
 ### Modelos de IA
 
 | Servicio | Modelo | Uso |
 |----------|--------|-----|
-| **Groq Cloud** | Llama 3 | Generación de texto (Brand DNA + Creative Engine) |
-| **Google AI Studio** | Gemini | Auditoría multimodal de imágenes |
+| **OpenAI** | gpt-4o-mini | LLM principal — Brand DNA + Creative Engine (RAG) |
+| **OpenAI** | gpt-4o | Módulo multimodal — Auditoría visual de imágenes (Vision API) |
 
 ### Observabilidad
 
@@ -446,10 +442,10 @@ El backend FastAPI está desplegado en **Google Cloud Run**:
 
 ### Base de Datos
 
-**Supabase** proporciona:
-- PostgreSQL relacional para usuarios, brands y contenidos
-- pgvector para embeddings del RAG
-- Autenticación integrada
+**Supabase** proporciona toda la capa de datos:
+- **PostgreSQL relacional** — Usuarios, brands, contenidos y flujos de aprobación
+- **pgvector** — Embeddings vectoriales para el sistema RAG (búsqueda semántica del manual de marca)
+- **Auth** — Autenticación y gestión de usuarios con roles (RBAC)
 
 ---
 
@@ -695,7 +691,7 @@ Cada interacción con la IA es registrada en Langfuse para auditoría completa:
 │     User: "Crea un post de Instagram para mi snack"          │
 │         │                                                    │
 │         ▼                                                    │
-│  5. LLM GENERATION: Groq (Llama 3) genera contenido          │
+│  5. LLM GENERATION: OpenAI gpt-4o-mini genera contenido      │
 │         │                                                    │
 │         ▼                                                    │
 │  6. OUTPUT: Contenido coherente con la marca                 │
@@ -713,129 +709,3 @@ Con RAG:
 1. Las reglas se recuperan **automáticamente** de la base vectorial
 2. El contexto se inyecta **sin intervención del usuario**
 3. Cada generación es **consistente** con el manual de marca
-
----
-
-## 14. Auditoría Multimodal
-
-### Proceso de Auditoría Visual
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                 Multimodal Audit Pipeline                    │
-│                                                              │
-│  1. UPLOAD: Aprobador B sube imagen (PNG, JPEG, GIF, WEBP)  │
-│         │                                                    │
-│         ▼                                                    │
-│  2. CONTEXT Retrieval:                                       │
-│     - Paleta de colores permitida                            │
-│     - Reglas de uso del logo                                 │
-│     - DOs y DON'Ts visuales                                  │
-│         │                                                    │
-│         ▼                                                    │
-│  3. VISION MODEL: Google AI Studio (Gemini) analiza imagen   │
-│         │                                                    │
-│         ▼                                                    │
-│  4. ANALYSIS:                                                │
-│     - Detección de colores vs paleta                         │
-│     - Verificación de tamaño/posición del logo               │
-│     - Evaluación de coherencia visual                        │
-│         │                                                    │
-│         ▼                                                    │
-│  5. RESULT:                                                  │
-│     ✅ CUMPLE: Score + fortalezas                            │
-│     ❌ NO CUMPLE: Problemas específicos + recomendaciones    │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Formato de Respuesta de Auditoría
-
-```json
-{
-  "audit": {
-    "approved": true,
-    "score": 0.92,
-    "explanation": "La imagen cumple con las reglas del manual de marca",
-    "strengths": [
-      "Los colores utilizados coinciden con la paleta primaria",
-      "El logo tiene el tamaño mínimo requerido"
-    ],
-    "issues": [],
-    "recommendations": [
-      "Considerar aumentar el contraste del texto"
-    ]
-  }
-}
-```
-
----
-
-## 15. Valor al Negocio
-
-### Métricas de Impacto
-
-| Métrica | Antes | Con Content Suite | Mejora |
-|---------|-------|-------------------|--------|
-| Tiempo de creación de contenido | 4-6 horas | 15-30 minutos | **~90%** |
-| Consistencia de marca | Variable | Garantizada | **100%** |
-| Tiempo de aprobación | 2-3 días | Horas | **~85%** |
-| Errores de marca en contenido | 15-20% | <2% | **~90%** |
-
-### Beneficios Clave
-
-1. **Escalabilidad:** Generar contenido para múltiples productos sin perder consistencia
-2. **Gobernanza:** Flujo de aprobación estructurado con trazabilidad completa
-3. **Eficiencia:** Reducción drástica del tiempo de creación a revisión
-4. **Cumplimiento:** Auditoría automática que garantiza adherencia al manual
-5. **Observabilidad:** Visibilidad total del proceso para auditoría y mejora continua
-
-### ROI Estimado
-
-Para una empresa que lanza **50 productos/año** con **5 piezas de contenido** cada uno:
-
-- **Ahorro en tiempo:** ~2,000 horas/año
-- **Reducción de retrabajo:** ~80%
-- **Consistencia de marca:** Garantizada en el 100% del contenido
-
----
-
-## 16. Limitaciones y Futuras Mejoras
-
-### Limitaciones Actuales
-
-1. **Modelos de IA:** Uso de capa gratuita de Groq y Google AI Studio (rate limits)
-2. **Almacenamiento de imágenes:** Las imágenes de auditoría no se persisten permanentemente
-3. **Langfuse:** Capa gratuita limitada a 50k eventos/mes
-4. **Autenticación:** Sesiones basadas en localStorage (mejorable con JWT refresh tokens)
-
-### Roadmap de Mejoras
-
-| Prioridad | Feature | Descripción |
-|-----------|---------|-------------|
-| **Alta** | JWT con refresh tokens | Autenticación más segura |
-| **Alta** | Persistencia de imágenes | Almacenar imágenes auditadas en Supabase Storage |
-| **Media** | Multi-idioma | Soporte para generación en inglés/portugués |
-| **Media** | Templates de contenido | Plantillas predefinidas por tipo de contenido |
-| **Media** | Notificaciones | Alertas por email cuando contenido es aprobado/rechazado |
-| **Baja** | Integración con CMS | Publicación directa a WordPress, Shopify, etc. |
-| **Baja** | A/B Testing | Comparar rendimiento de contenido aprobado vs rechazado |
-| **Baja** | Analytics de marca | Dashboard de métricas de consistencia de marca |
-
----
-
-## 17. Licencia
-
-Este proyecto fue desarrollado como parte del **Reto Técnico: Developer Gen AI Analyst** para Alicorp.
-
----
-
-## Créditos
-
-**Desarrollado por:** [Tu Nombre]  
-**Rol:** Developer Gen AI Analyst  
-**Fecha:** Mayo 2026  
-**Empresa:** Alicorp
-
----
-
-> *"La consistencia de marca no es un lujo, es una necesidad en el lanzamiento masivo de productos."*
